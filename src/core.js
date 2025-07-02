@@ -549,12 +549,24 @@ const initTs = async () => {
   if (!esmsTsTransform) esmsTsTransform = m.transform;
 };
 
-const contentTypeRegEx = /^(text|application)\/((x-)?javascript|wasm|json|css|typescript)(;|$)/;
+// https://mimesniff.spec.whatwg.org/#parse-a-mime-type
+// https://mimesniff.spec.whatwg.org/#javascript-mime-type
+// https://mimesniff.spec.whatwg.org/#json-mime-type
+// https://github.com/denoland/deno_media_type/blob/abf2b6808bdff4cd6f01ec2acf51955956956792/src/lib.rs#L235-L239
+const contentTypeRegEx =
+  /^[\n\r\t ]*(?:((?:(?:application\/|text\/)(?:x-)?(?:ecmascript|javascript))|text\/(?:livescript|jscript|javascript1\.[0-5]))|(?:text\/|application\/|[-!~#-'*+.0-9^-z|~]+\/[-!~#-'*+.0-9^-z|~]*\+)(json)|application\/(wasm)|text\/(css)|(application\/(x-)?|text\/)typescript|video\/(mp2t|vnd\.dlna\.mpeg-tts))[\n\r\t ]*(;|$)/;
 async function defaultSourceHook(url, fetchOpts, parent) {
   const res = await doFetch(url, fetchOpts, parent);
-  let [, , t] = (res.headers.get('content-type') || '').match(contentTypeRegEx) || [];
+  let contentType,
+    [
+      t,
+      js,
+      json,
+      wasm,
+      css
+    ] = (contentType = res.headers.get('content-type') || '').toLowerCase().match(contentTypeRegEx) || [];
   if (!t) {
-    if (url.endsWith('.ts') || url.endsWith('.mts')) t = 'ts';
+    if (/\.m?ts(#|\?|$)/.test(url)) t = 'ts';
     else
       throw Error(
         `Unsupported Content-Type "${contentType}" loading ${url}${fromParent(parent)}. Modules must be served with a valid MIME type like application/javascript.`
@@ -562,11 +574,8 @@ async function defaultSourceHook(url, fetchOpts, parent) {
   }
   return {
     url: res.url,
-    source: t === 'wasm' ? await WebAssembly.compileStreaming(res) : await res.text(),
-    type:
-      t[0] === 'x' || (t[0] === 'j' && t[1] === 'a') ? 'js'
-      : t[0] === 't' ? 'ts'
-      : t
+    source: wasm ? await WebAssembly.compileStreaming(res) : await res.text(),
+    type: js ? 'js' : json || wasm || css || 'ts'
   };
 }
 
