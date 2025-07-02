@@ -1,5 +1,4 @@
 import { self } from './self.js';
-import { initHotReload } from './hot-reload.js';
 
 export const hasDocument = typeof document !== 'undefined';
 
@@ -69,7 +68,11 @@ export const {
   nativePassthrough = !hasCustomizationHooks && !hotReload
 } = esmsInitOptions;
 
-if (hotReload) [importHook, resolveHook, metaHook] = initHotReload();
+export const setHooks = (importHook_, resolveHook_, metaHook_) => (
+  (importHook = importHook_),
+  (resolveHook = resolveHook_),
+  (metaHook = metaHook_)
+);
 
 export const mapOverrides = esmsInitOptions.mapOverrides;
 

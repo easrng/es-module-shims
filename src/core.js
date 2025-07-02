@@ -42,7 +42,7 @@ import {
   featureDetectionPromise
 } from './features.js';
 import * as lexer from '../node_modules/es-module-lexer/dist/lexer.asm.js';
-import { hotReload } from './hot-reload.js';
+import { hotReload, initHotReload } from './hot-reload.js';
 
 const _resolve = (id, parentUrl = pageBaseUrl) => {
   const urlResolved = resolveIfNotPlainOrUrl(id, parentUrl) || asURL(id);
@@ -926,3 +926,5 @@ const processPreload = link => {
     fetchCache[link.href] = fetchModule(link.href, getFetchOpts(link));
   });
 };
+
+if (hotReloadEnabled) initHotReload(topLevelLoad, importShim);
